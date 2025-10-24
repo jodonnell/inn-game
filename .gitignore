@@ -24,3 +24,7 @@ dist-ssr
 *.sw?
 
 raw_assets
+playwright-report
+blob-report
+test-results
+.playwright
