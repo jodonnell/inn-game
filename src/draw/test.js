@@ -6,16 +6,15 @@ import {
   Texture,
   Sprite,
 } from "pixi.js"
-import atlasData from "@/assets/spritesheets/pieces-spritesheet.json"
+import sheetAtlas from "@/assets/spritesheets/sheet.json"
 
-let base = '.'
-if (import.meta.env.DEV)
-  base = '../..'
+let base = "."
+if (import.meta.env.DEV) base = "../.."
 
 const load = async () => {
   return Promise.all([
     Assets.load(`${base}/assets/fonts/OpenSans-Medium.ttf`),
-    Assets.load(`${base}/assets/spritesheets/pieces-spritesheet.png`),
+    Assets.load(`${base}/assets/spritesheets/sheet.png`),
   ])
 }
 
@@ -34,10 +33,8 @@ const drawText = async (app) => {
 }
 
 const sprites = async () => {
-  const texture = Texture.from(
-    `${base}/assets/spritesheets/pieces-spritesheet.png`,
-  )
-  const spritesheet = new Spritesheet(texture, atlasData)
+  const texture = Texture.from(`${base}/assets/spritesheets/sheet.png`)
+  const spritesheet = new Spritesheet(texture, sheetAtlas)
   await spritesheet.parse()
   return spritesheet
 }
@@ -51,7 +48,10 @@ export const test = async () => {
 
   drawText(app)
   const spritesheet = await sprites()
-  const sprite = new Sprite(spritesheet.textures["pawn-w-trim.png"])
+  const sprite = new Sprite(
+    spritesheet.textures["manager-walking-right.png"] ??
+      spritesheet.textures["manager-walking.png"],
+  )
   sprite.x = 500
   sprite.y = 300
   sprite.eventMode = "static"
