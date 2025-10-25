@@ -6,7 +6,7 @@ import {
   Texture,
   Sprite,
 } from "pixi.js"
-import sheetAtlas from "@/assets/spritesheets/sheet.json"
+import managerAtlas from "@/assets/spritesheets/manager-sheet.json"
 
 let base = "."
 if (import.meta.env.DEV) base = "../.."
@@ -14,7 +14,7 @@ if (import.meta.env.DEV) base = "../.."
 const load = async () => {
   return Promise.all([
     Assets.load(`${base}/assets/fonts/OpenSans-Medium.ttf`),
-    Assets.load(`${base}/assets/spritesheets/sheet.png`),
+    Assets.load(`${base}/assets/spritesheets/manager-sheet.png`),
   ])
 }
 
@@ -33,8 +33,10 @@ const drawText = async (app) => {
 }
 
 const sprites = async () => {
-  const texture = Texture.from(`${base}/assets/spritesheets/sheet.png`)
-  const spritesheet = new Spritesheet(texture, sheetAtlas)
+  const texture = Texture.from(
+    `${base}/assets/spritesheets/manager-sheet.png`,
+  )
+  const spritesheet = new Spritesheet(texture, managerAtlas)
   await spritesheet.parse()
   return spritesheet
 }
@@ -49,8 +51,8 @@ export const test = async () => {
   drawText(app)
   const spritesheet = await sprites()
   const sprite = new Sprite(
-    spritesheet.textures["manager-walking-right.png"] ??
-      spritesheet.textures["manager-walking.png"],
+    spritesheet.textures["0001-manager-all-frames_frontidle_0001.png"] ??
+      spritesheet.textures["0002-manager-all-frames_frontinteract_0001.png"],
   )
   sprite.x = 500
   sprite.y = 300
