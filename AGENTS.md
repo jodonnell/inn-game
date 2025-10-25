@@ -39,3 +39,6 @@ The inn-game project renders Pixi.js scenes via Vite. Use this guide to keep con
 ## Deployment & Asset Notes
 - `scripts/deploy.sh` rewrites `index.html` and overlays `assets/`; run from a clean tree to avoid accidental deletions.
 - When adding sprites or fonts, update `assets/` and ensure `src/draw/test.js` references the correct paths under the `@/assets/` alias.
+
+## Game notes
+- this game will be somewhat like stardew valley
