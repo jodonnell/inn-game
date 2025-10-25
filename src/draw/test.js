@@ -44,7 +44,8 @@ export const test = async ({
   const systems = registerSystems(createSystemRunner(registry))
 
   const createInput = keyboardFactory ?? createKeyboardInput
-  const keyboard = createInput(keyboardTarget) ?? createKeyboardInput(keyboardTarget)
+  const keyboard =
+    createInput(keyboardTarget) ?? createKeyboardInput(keyboardTarget)
 
   const managerEntity = createManagerEntity(registry, {
     sprite,

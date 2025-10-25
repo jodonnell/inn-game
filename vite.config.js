@@ -1,11 +1,11 @@
-import { defineConfig } from 'vite'
-import { resolve } from 'path'
+import { defineConfig } from "vite"
+import { resolve } from "path"
 
 export default defineConfig({
-  base: './',
+  base: "./",
   resolve: {
     alias: {
-      '@': resolve(__dirname),
-    }
-  }
+      "@": resolve(__dirname),
+    },
+  },
 })
