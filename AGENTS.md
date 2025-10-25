@@ -27,7 +27,9 @@ The inn-game project renders Pixi.js scenes via Vite. Use this guide to keep con
 ## Testing Guidelines
 - Write Jest specs beside their logical area (e.g., `test/logic/board.test.js`); suffix files with `.test.js`.
 - Target edge conditions and rendering hooks; stub Pixi APIs when the suite cannot mimic the browser.
+- Run the test suites liberally to keep a tight feedback loop; quick iterations help catch regressions early.
 - Run `npm run test` before pushing and add snapshots only when they stabilize behavior.
+- Run `npm run test:e2e` frequently to exercise canvas flows end-to-end and keep parity with manual playtests.
 - Use Playwright (`tests/e2e/`) for canvas or input flows; keep e2e specs deterministic by leveraging locators instead of timing sleeps.
 
 ## Commit & Pull Request Guidelines
