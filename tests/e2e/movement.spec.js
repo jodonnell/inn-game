@@ -9,25 +9,30 @@ const readyGame = async (page) => {
 
   await page.waitForFunction(() => {
     const game = window.__innGame
-    return Boolean(game && game.sprite)
+    return Boolean(
+      game &&
+        game.ecs &&
+        game.ecs.entities?.manager !== undefined &&
+        game.debug,
+    )
   })
 }
 
 const readGameState = async (page) => {
   return page.evaluate(() => {
-    const game = window.__innGame
+    const debug = window.__innGame?.debug
     return {
-      x: game?.sprite?.x ?? null,
-      y: game?.sprite?.y ?? null,
-      direction: game?.state?.direction ?? null,
-      animationKey: game?.state?.animationKey ?? null,
+      x: debug?.x ?? null,
+      y: debug?.y ?? null,
+      direction: debug?.direction ?? null,
+      animationKey: debug?.animationKey ?? null,
     }
   })
 }
 
 const waitForAnimationKey = async (page, key) => {
   await page.waitForFunction(
-    (expected) => window.__innGame?.state?.animationKey === expected,
+    (expected) => window.__innGame?.debug?.animationKey === expected,
     key,
   )
 }
@@ -56,8 +61,8 @@ test.describe("Manager movement", () => {
 
     await pressArrow(page, "ArrowRight")
     await page.waitForFunction((x) => {
-      const sprite = window.__innGame?.sprite
-      return !!sprite && sprite.x > x
+      const debug = window.__innGame?.debug
+      return !!debug && debug.x > x
     }, start.x)
 
     await waitForAnimationKey(page, "walk-right")
@@ -77,8 +82,8 @@ test.describe("Manager movement", () => {
 
     await pressArrow(page, "ArrowUp")
     await page.waitForFunction((y) => {
-      const sprite = window.__innGame?.sprite
-      return !!sprite && sprite.y < y
+      const debug = window.__innGame?.debug
+      return !!debug && debug.y < y
     }, start.y)
 
     await waitForAnimationKey(page, "walk-up")
