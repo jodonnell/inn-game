@@ -1,9 +1,86 @@
-import { Application, Assets, Spritesheet, Texture, Sprite } from "pixi.js"
+import {
+  Application,
+  Assets,
+  Spritesheet,
+  Texture,
+  AnimatedSprite,
+} from "pixi.js"
 import managerAtlas from "@/assets/spritesheets/manager-sheet.json"
 import { useKeyboardInput } from "@/src/input/keyboard.js"
 
 let base = "."
 if (import.meta.env.DEV) base = "../.."
+
+const WALK_FPS = 7
+const MOVE_SPEED = 4
+const DEFAULT_DIRECTION = "down"
+const INITIAL_POSITION = { x: 500, y: 300 }
+
+const DIRECTION_SEGMENTS = {
+  down: { walk: "frontwalk", idle: "frontidle" },
+  up: { walk: "backwalk", idle: "backidle" },
+  left: { walk: "leftwalk", idle: "leftidle" },
+  right: { walk: "rightwalk", idle: "rightidle" },
+}
+
+const collectTextures = (spritesheet, segment) => {
+  return Object.keys(spritesheet.textures)
+    .filter((key) => key.includes(segment))
+    .sort()
+    .map((key) => spritesheet.textures[key])
+}
+
+const buildAnimations = (spritesheet) => {
+  return Object.fromEntries(
+    Object.entries(DIRECTION_SEGMENTS).map(([direction, segments]) => {
+      const walkTextures = collectTextures(spritesheet, segments.walk)
+      const idleTextures = collectTextures(spritesheet, segments.idle)
+      const idleTexture =
+        idleTextures[0] ?? walkTextures[0] ?? Texture.EMPTY
+
+      return [
+        direction,
+        {
+          walk: walkTextures.length > 0 ? walkTextures : [idleTexture],
+          idle: idleTexture,
+        },
+      ]
+    }),
+  )
+}
+
+const pickInitialFrame = (animations) => {
+  const preferred =
+    animations[DEFAULT_DIRECTION]?.idle ??
+    animations[DEFAULT_DIRECTION]?.walk[0]
+  if (preferred) return preferred
+
+  for (const entry of Object.values(animations)) {
+    if (entry.idle) return entry.idle
+    if (entry.walk.length > 0) return entry.walk[0]
+  }
+
+  return Texture.EMPTY
+}
+
+const setWalkAnimation = (sprite, variant) => {
+  sprite.textures = variant.walk
+  sprite.loop = true
+  sprite.gotoAndPlay(0)
+}
+
+const setIdleAnimation = (sprite, variant) => {
+  const idleTexture = variant.idle ?? variant.walk[0] ?? Texture.EMPTY
+  sprite.textures = [idleTexture]
+  sprite.loop = false
+  sprite.gotoAndStop(0)
+}
+
+const resolveDirection = (dx, dy, fallback) => {
+  if (dy !== 0) return dy < 0 ? "up" : "down"
+  if (dx !== 0) return dx < 0 ? "left" : "right"
+  return fallback
+}
 
 const load = async () => {
   await Assets.load(`${base}/assets/spritesheets/manager-sheet.png`)
@@ -16,13 +93,18 @@ const sprites = async () => {
   const spritesheet = new Spritesheet(texture, managerAtlas)
   await spritesheet.parse()
 
-  const textureFrame =
-    spritesheet.textures["0001-manager-all-frames_frontidle_0001.png"] ??
-    spritesheet.textures["0002-manager-all-frames_frontinteract_0001.png"]
+  const animations = buildAnimations(spritesheet)
+  const initialIdle = pickInitialFrame(animations)
+
+  const sprite = new AnimatedSprite([initialIdle])
+  sprite.animationSpeed = WALK_FPS / 60
+  sprite.loop = false
+  sprite.gotoAndStop(0)
 
   return {
-    sprite: textureFrame ? new Sprite(textureFrame) : new Sprite(),
+    sprite,
     spritesheet,
+    animations,
   }
 }
 
@@ -38,24 +120,55 @@ export const test = async () => {
 
   await load()
 
-  const { sprite } = await sprites()
-  sprite.x = 500
-  sprite.y = 300
+  const { sprite, animations } = await sprites()
+  sprite.x = INITIAL_POSITION.x
+  sprite.y = INITIAL_POSITION.y
   sprite.eventMode = "static"
   app.stage.addChild(sprite)
 
+  const state = {
+    direction: DEFAULT_DIRECTION,
+    animationKey: "",
+    moving: false,
+  }
+
+  const applyAnimation = (direction, moving) => {
+    const variant = animations[direction] ?? animations[DEFAULT_DIRECTION]
+    if (!variant) return
+
+    const key = `${moving ? "walk" : "idle"}-${direction}`
+    if (state.animationKey === key) {
+      state.direction = direction
+      state.moving = moving
+      return
+    }
+
+    if (moving) setWalkAnimation(sprite, variant)
+    else setIdleAnimation(sprite, variant)
+
+    state.animationKey = key
+    state.direction = direction
+    state.moving = moving
+  }
+
+  applyAnimation(state.direction, false)
+
   const { pressed } = useKeyboardInput()
+
+  const resetPosition = () => {
+    sprite.x = INITIAL_POSITION.x
+    sprite.y = INITIAL_POSITION.y
+    applyAnimation(DEFAULT_DIRECTION, false)
+  }
 
   window.__innGame = {
     app,
     sprite,
-    resetPosition: () => {
-      sprite.x = 500
-      sprite.y = 300
-    },
+    animations,
+    state,
+    resetPosition,
   }
 
-  const speed = 4
   app.ticker.add((ticker) => {
     let dx = 0
     let dy = 0
@@ -65,12 +178,21 @@ export const test = async () => {
     if (pressed.has("ArrowUp")) dy -= 1
     if (pressed.has("ArrowDown")) dy += 1
 
-    if (dx === 0 && dy === 0) return
+    const moving = dx !== 0 || dy !== 0
+
+    if (!moving) {
+      applyAnimation(state.direction, false)
+      return
+    }
+
+    const direction = resolveDirection(dx, dy, state.direction)
+
+    applyAnimation(direction, true)
 
     const length = Math.hypot(dx, dy) || 1
     const delta = ticker.deltaTime
 
-    sprite.x += (dx / length) * speed * delta
-    sprite.y += (dy / length) * speed * delta
+    sprite.x += (dx / length) * MOVE_SPEED * delta
+    sprite.y += (dy / length) * MOVE_SPEED * delta
   })
 }
