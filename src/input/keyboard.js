@@ -1,6 +1,4 @@
-const ensureInput = () => {
-  if (window.__innGameInput) return window.__innGameInput
-
+const createKeyboardAdapter = (target) => {
   const pressed = new Set()
 
   const handleKeyDown = (event) => {
@@ -15,21 +13,19 @@ const ensureInput = () => {
     pressed.delete(event.code)
   }
 
-  window.addEventListener("keydown", handleKeyDown)
-  window.addEventListener("keyup", handleKeyUp)
+  target?.addEventListener?.("keydown", handleKeyDown)
+  target?.addEventListener?.("keyup", handleKeyUp)
 
-  window.__innGameInput = {
+  return {
     pressed,
     dispose: () => {
-      window.removeEventListener("keydown", handleKeyDown)
-      window.removeEventListener("keyup", handleKeyUp)
-      window.__innGameInput = undefined
+      target?.removeEventListener?.("keydown", handleKeyDown)
+      target?.removeEventListener?.("keyup", handleKeyUp)
     },
   }
-
-  return window.__innGameInput
 }
 
-export const useKeyboardInput = () => {
-  return ensureInput()
+export const createKeyboardInput = (target) => {
+  const inputTarget = target ?? (typeof window !== "undefined" ? window : null)
+  return createKeyboardAdapter(inputTarget)
 }

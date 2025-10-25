@@ -1,5 +1,5 @@
 import { createScene } from "@/src/draw/create-scene.js"
-import { useKeyboardInput } from "@/src/input/keyboard.js"
+import { createKeyboardInput } from "@/src/input/keyboard.js"
 import { createRegistry, createSystemRunner } from "@/src/core/ecs/index.js"
 import {
   AnimationSet,
@@ -13,14 +13,27 @@ import {
   computeManagerDebug,
   resetManagerState,
 } from "@/src/game/debug/manager-debug.js"
+import { attachRuntimeToWindow } from "@/src/game/debug/window-bridge.js"
 import { createManagerEntity } from "@/src/game/entities/manager-entity.js"
 import {
   loadManagerResources,
   preloadManagerAssets,
 } from "@/src/game/resources/manager-resources.js"
+import { createGameRuntime } from "@/src/game/runtime/create-runtime.js"
 import { managerSystems } from "@/src/game/systems/index.js"
 
-export const test = async () => {
+const registerSystems = (systems) => {
+  for (const system of managerSystems) {
+    systems.addSystem(system)
+  }
+  return systems
+}
+
+export const test = async ({
+  debugSink,
+  keyboardTarget,
+  keyboardFactory = createKeyboardInput,
+} = {}) => {
   const app = await createScene()
   await preloadManagerAssets()
 
@@ -28,12 +41,10 @@ export const test = async () => {
   app.stage.addChild(sprite)
 
   const registry = createRegistry()
-  const systems = createSystemRunner(registry)
-  for (const system of managerSystems) {
-    systems.addSystem(system)
-  }
+  const systems = registerSystems(createSystemRunner(registry))
 
-  const keyboard = useKeyboardInput()
+  const createInput = keyboardFactory ?? createKeyboardInput
+  const keyboard = createInput(keyboardTarget) ?? createKeyboardInput(keyboardTarget)
 
   const managerEntity = createManagerEntity(registry, {
     sprite,
@@ -41,43 +52,31 @@ export const test = async () => {
     keyboard,
   })
 
-  const updateDebugState = () => {
-    window.__innGame.debug = computeManagerDebug(registry, managerEntity)
-  }
-
-  const resetPosition = () => {
-    resetManagerState(registry, managerEntity)
-    updateDebugState()
-  }
-
-  const innGame = {
+  const runtime = createGameRuntime({
     app,
-    ecs: {
-      registry,
-      systems,
-      components: {
-        Transform,
-        Movement,
-        SpriteRef,
-        AnimationSet,
-        AnimationState,
-        InputState,
-      },
-      entities: {
-        manager: managerEntity,
-      },
-    },
+    registry,
+    systems,
     keyboard,
-    managerEntity,
-    resetPosition,
-    debug: {},
+    components: {
+      Transform,
+      Movement,
+      SpriteRef,
+      AnimationSet,
+      AnimationState,
+      InputState,
+    },
+    entities: {
+      manager: managerEntity,
+    },
+    computeDebug: () => computeManagerDebug(registry, managerEntity),
+    resetEntityState: () => resetManagerState(registry, managerEntity),
+    debugSink,
+  })
+
+  if (!debugSink && typeof window !== "undefined") {
+    attachRuntimeToWindow(runtime, window)
   }
 
-  window.__innGame = innGame
-  updateDebugState()
-
-  app.ticker.add((ticker) => {
-    systems.run(ticker.deltaTime)
-    updateDebugState()
-  })
+  runtime.start()
+  return runtime
 }
