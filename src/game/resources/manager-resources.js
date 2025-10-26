@@ -5,24 +5,19 @@ import {
   Texture,
 } from "pixi.js"
 import managerAtlas from "@/assets/spritesheets/manager-sheet.json"
+import managerSheetUrl from "@/assets/spritesheets/manager-sheet.png?url"
 import { WALK_FPS } from "@/src/game/constants.js"
 import {
   buildAnimations,
   pickInitialFrame,
 } from "@/src/game/animations/manager-animations.js"
 
-const getAssetBase = () => {
-  return import.meta.env.DEV ? "../.." : "."
-}
-
 export const preloadManagerAssets = async () => {
-  const base = getAssetBase()
-  await Assets.load(`${base}/assets/spritesheets/manager-sheet.png`)
+  await Assets.load(managerSheetUrl)
 }
 
 export const loadManagerResources = async () => {
-  const base = getAssetBase()
-  const texture = Texture.from(`${base}/assets/spritesheets/manager-sheet.png`)
+  const texture = Texture.from(managerSheetUrl)
   const spritesheet = new Spritesheet(texture, managerAtlas)
   await spritesheet.parse()
 
