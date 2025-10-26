@@ -27,6 +27,19 @@ describe("inputSystem", () => {
     expect(movement.dy).toBe(-1)
     expect(movement.moving).toBe(true)
   })
+
+  it("keeps movement idle when no directional keys are pressed", () => {
+    const input = InputState.create({ pressed: new Set() })
+    const movement = Movement.create({ moving: true, dx: 5, dy: 5 })
+
+    inputSystem.update({
+      components: { InputState: input, Movement: movement },
+    })
+
+    expect(movement.dx).toBe(0)
+    expect(movement.dy).toBe(0)
+    expect(movement.moving).toBe(false)
+  })
 })
 
 describe("movementSystem", () => {
@@ -46,6 +59,21 @@ describe("movementSystem", () => {
     expect(transform.x).toBe(10 + movement.speed * 2)
     expect(transform.y).toBe(5)
     expect(movement.direction).toBe("right")
+  })
+
+  it("prioritizes vertical direction when both axes are active", () => {
+    const movement = Movement.create({})
+    movement.dx = 1
+    movement.dy = -1
+    movement.moving = true
+    const transform = Transform.create({ x: 0, y: 0 })
+
+    movementSystem.update({
+      components: { Movement: movement, Transform: transform },
+      delta: 1,
+    })
+
+    expect(movement.direction).toBe("up")
   })
 })
 

@@ -4,7 +4,7 @@
   "description": "Cozy inn management game packaged for desktop via Electron.",
   "main": "electron/main.js",
   "scripts": {
-    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js test",
+    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js test --coverage",
     "prettier": "prettier -w src/**/*.js *.js test/**/*.js",
     "lint": "eslint src/**/*.js test/**/*.js",
     "dev": "vite",

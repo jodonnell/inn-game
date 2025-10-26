@@ -7,7 +7,8 @@ import {
 
 const Position = defineComponent("Position", () => ({ x: 0, y: 0 }))
 const Velocity = defineComponent("Velocity", () => ({ dx: 0, dy: 0 }))
-const Flag = defineComponent("Flag", () => ({ value: false }))
+const Flag = defineComponent("Flag", { value: false })
+const Label = defineComponent("Label", { text: "default" })
 
 describe("createRegistry", () => {
   it("stores and retrieves component data per entity", () => {
@@ -34,6 +35,33 @@ describe("createRegistry", () => {
 
     registry.removeComponent(include, Velocity)
     expect(registry.query(Position, Velocity)).toEqual([])
+  })
+
+  it("tracks component membership through hasComponent", () => {
+    const registry = createRegistry()
+    const entity = registry.createEntity()
+
+    registry.addComponent(entity, Position)
+    expect(registry.hasComponent(entity, Position)).toBe(true)
+    expect(registry.hasComponent(entity, Velocity)).toBe(false)
+
+    registry.removeComponent(entity, Position)
+    expect(registry.hasComponent(entity, Position)).toBe(false)
+  })
+
+  it("creates components from object defaults without sharing instances", () => {
+    const registry = createRegistry()
+    const first = registry.createEntity()
+    const second = registry.createEntity()
+
+    const firstLabel = registry.addComponent(first, Label)
+    const secondLabel = registry.addComponent(second, Label, { text: "custom" })
+
+    expect(firstLabel).toEqual({ text: "default" })
+    expect(secondLabel).toEqual({ text: "custom" })
+
+    secondLabel.text = "mutated"
+    expect(firstLabel.text).toBe("default")
   })
 })
 
@@ -78,6 +106,25 @@ describe("createSystemRunner", () => {
       update: updateSpy,
     })
 
+    systems.run(1)
+    expect(updateSpy).not.toHaveBeenCalled()
+  })
+
+  it("removes systems when the disposer is invoked", () => {
+    const registry = createRegistry()
+    const systems = createSystemRunner(registry)
+    const entity = registry.createEntity()
+
+    registry.addComponent(entity, Position)
+
+    const updateSpy = jest.fn()
+    const dispose = systems.addSystem({
+      name: "position-reader",
+      components: [Position],
+      update: updateSpy,
+    })
+
+    dispose()
     systems.run(1)
     expect(updateSpy).not.toHaveBeenCalled()
   })

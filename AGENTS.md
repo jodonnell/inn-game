@@ -31,6 +31,7 @@ The inn-game project renders Pixi.js scenes via Vite. Use this guide to keep con
 - Run `npm run test` before pushing and add snapshots only when they stabilize behavior.
 - Run `npm run test:e2e` frequently to exercise canvas flows end-to-end and keep parity with manual playtests.
 - Use Playwright (`tests/e2e/`) for canvas or input flows; keep e2e specs deterministic by leveraging locators instead of timing sleeps.
+- Use behavior driven testing, i dont want to test the implementation.
 
 ## Commit & Pull Request Guidelines
 - Keep commit subjects in the imperative mood, mirroring the existing `Initial commit`.
