@@ -2,6 +2,7 @@ const noop = () => {}
 
 export const createGameRuntime = ({
   app,
+  scene,
   registry,
   systems,
   components,
@@ -14,6 +15,10 @@ export const createGameRuntime = ({
   let sink = debugSink ?? noop
   const runtime = {
     app,
+    scene: {
+      world: scene?.world,
+      metrics: scene?.metrics,
+    },
     ecs: {
       registry,
       systems,
@@ -63,10 +68,12 @@ export const createGameRuntime = ({
   runtime.dispose = () => {
     runtime.stop()
     keyboard?.dispose?.()
+    scene?.dispose?.()
   }
 
   runtime.snapshot = () => ({
     app: runtime.app,
+    scene: runtime.scene,
     ecs: runtime.ecs,
     keyboard: runtime.keyboard,
     managerEntity: runtime.managerEntity,

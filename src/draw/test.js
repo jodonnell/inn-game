@@ -34,11 +34,12 @@ export const test = async ({
   keyboardTarget,
   keyboardFactory = createKeyboardInput,
 } = {}) => {
-  const app = await createScene()
+  const scene = await createScene()
+  const { app, world } = scene
   await preloadManagerAssets()
 
   const { sprite, animations } = await loadManagerResources()
-  app.stage.addChild(sprite)
+  world.addChild(sprite)
 
   const registry = createRegistry()
   const systems = registerSystems(createSystemRunner(registry))
@@ -55,6 +56,7 @@ export const test = async ({
 
   const runtime = createGameRuntime({
     app,
+    scene,
     registry,
     systems,
     keyboard,
