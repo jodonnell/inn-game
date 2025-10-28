@@ -8,6 +8,7 @@ export const createGameRuntime = ({
   components,
   entities,
   keyboard,
+  map = null,
   computeDebug,
   resetEntityState,
   debugSink,
@@ -27,6 +28,7 @@ export const createGameRuntime = ({
     },
     keyboard,
     managerEntity: entities.manager,
+    map,
     debug: {},
   }
 
@@ -48,7 +50,7 @@ export const createGameRuntime = ({
 
   let running = false
   const handleTick = (ticker) => {
-    systems.run(ticker.deltaTime)
+    systems.run(ticker.deltaTime, { map })
     publishDebug()
   }
 
@@ -77,6 +79,7 @@ export const createGameRuntime = ({
     ecs: runtime.ecs,
     keyboard: runtime.keyboard,
     managerEntity: runtime.managerEntity,
+    map: runtime.map,
     debug: runtime.debug,
   })
 

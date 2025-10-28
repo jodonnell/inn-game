@@ -33,3 +33,15 @@ export const AnimationState = defineComponent("AnimationState", () => ({
 export const InputState = defineComponent("InputState", () => ({
   pressed: new Set(),
 }))
+
+export const MapLayer = defineComponent("MapLayer", () => ({
+  container: null,
+  collisions: [],
+  layers: [],
+  dimensions: {
+    tilewidth: 0,
+    tileheight: 0,
+    width: 0,
+    height: 0,
+  },
+}))

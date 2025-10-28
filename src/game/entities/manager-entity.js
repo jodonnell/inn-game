@@ -48,6 +48,7 @@ export const createManagerEntity = (registry, { sprite, animations, keyboard }) 
 
   sprite.x = INITIAL_POSITION.x
   sprite.y = INITIAL_POSITION.y
+  sprite.zIndex = 1
 
   return entity
 }
