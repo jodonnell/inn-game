@@ -19,7 +19,7 @@
   "author": "Jacob",
   "license": "ISC",
   "dependencies": {
-    "pixi.js": "^8.9.2"
+    "pixi.js": "^8.14.0"
   },
   "devDependencies": {
     "@playwright/test": "^1.56.1",
