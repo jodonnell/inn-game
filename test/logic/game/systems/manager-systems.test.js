@@ -50,10 +50,16 @@ describe("movementSystem", () => {
     movement.moving = true
     movement.direction = DEFAULT_DIRECTION
     const transform = Transform.create({ x: 10, y: 5 })
+    const sprite = { width: 32, height: 32 }
 
     movementSystem.update({
-      components: { Movement: movement, Transform: transform },
+      components: {
+        Movement: movement,
+        Transform: transform,
+        SpriteRef: SpriteRef.create({ sprite }),
+      },
       delta: 2,
+      context: {},
     })
 
     expect(transform.x).toBe(10 + movement.speed * 2)
@@ -67,13 +73,81 @@ describe("movementSystem", () => {
     movement.dy = -1
     movement.moving = true
     const transform = Transform.create({ x: 0, y: 0 })
+    const sprite = { width: 32, height: 32 }
 
     movementSystem.update({
-      components: { Movement: movement, Transform: transform },
+      components: {
+        Movement: movement,
+        Transform: transform,
+        SpriteRef: SpriteRef.create({ sprite }),
+      },
       delta: 1,
+      context: {},
     })
 
     expect(movement.direction).toBe("up")
+  })
+
+  it("prevents movement into collision rectangles", () => {
+    const movement = Movement.create({})
+    movement.dx = 1
+    movement.dy = 0
+    movement.moving = true
+    const transform = Transform.create({ x: 60, y: 64 })
+    const sprite = { width: 32, height: 32 }
+
+    const collisions = [
+      { x: 64, y: 64, width: 32, height: 32 },
+    ]
+
+    movementSystem.update({
+      components: {
+        Movement: movement,
+        Transform: transform,
+        SpriteRef: SpriteRef.create({ sprite }),
+      },
+      delta: 1,
+      context: {
+        map: {
+          collisions,
+          container: { x: 0, y: 0 },
+          dimensions: { tilewidth: 32, tileheight: 32 },
+        },
+      },
+    })
+
+    expect(transform.x).toBe(60)
+    expect(transform.y).toBe(64)
+  })
+
+  it("allows movement when only the sprite's upper half intersects", () => {
+    const movement = Movement.create({})
+    movement.dx = 1
+    movement.dy = 0
+    movement.moving = true
+    const transform = Transform.create({ x: 60, y: 32 })
+    const sprite = { width: 32, height: 32 }
+
+    const collisions = [{ x: 64, y: 32, width: 32, height: 16 }]
+
+    movementSystem.update({
+      components: {
+        Movement: movement,
+        Transform: transform,
+        SpriteRef: SpriteRef.create({ sprite }),
+      },
+      delta: 1,
+      context: {
+        map: {
+          collisions,
+          container: { x: 0, y: 0 },
+          dimensions: { tilewidth: 32, tileheight: 32 },
+        },
+      },
+    })
+
+    expect(transform.x).toBe(64)
+    expect(transform.y).toBe(32)
   })
 })
 

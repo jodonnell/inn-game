@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, jest } from "@jest/globals"
+import tileSheetUrl from "@/assets/spritesheets/tile-sheet.png?url"
 
 const mockAssetsLoad = jest.fn(() => Promise.resolve())
 const textureSource = { width: 2048, height: 6336 }
@@ -32,7 +33,7 @@ describe("map-resources", () => {
     await preloadMapAssets()
 
     expect(mockAssetsLoad).toHaveBeenCalledTimes(1)
-    expect(mockAssetsLoad.mock.calls[0][0]).toContain("tile-sheet.png")
+    expect(mockAssetsLoad.mock.calls[0][0]).toBe(tileSheetUrl)
   })
 
   it("supplies map metadata with parsed tileset attributes", async () => {
@@ -45,7 +46,7 @@ describe("map-resources", () => {
       columns: 64,
       firstgid: 1,
     })
-    expect(mockTextureFrom).toHaveBeenCalledWith(expect.stringContaining("tile-sheet.png"))
+    expect(mockTextureFrom).toHaveBeenCalledWith(tileSheetUrl)
   })
 
   it("creates a defensive copy of the map payload", async () => {
