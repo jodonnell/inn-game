@@ -19,14 +19,15 @@
   "author": "Jacob",
   "license": "ISC",
   "dependencies": {
+    "howler": "^2.2.4",
     "pixi.js": "^8.14.0"
   },
   "devDependencies": {
     "@playwright/test": "^1.56.1",
-    "eslint": "^9.26.0",
-    "jest": "^29.7.0",
     "electron": "^34.1.2",
     "electron-builder": "^25.1.8",
+    "eslint": "^9.26.0",
+    "jest": "^29.7.0",
     "prettier": "^3.5.3",
     "vite": "^6.3.5"
   },
