@@ -100,9 +100,25 @@ const loadFixtureMap = () => {
   return JSON.parse(raw)
 }
 
+const setDiagonalHorizontalFlip = (map, tileIndex) => {
+  const FLIP_HORIZONTAL_FLAG = 0x80000000
+  const FLIP_DIAGONAL_FLAG = 0x20000000
+
+  const tileLayer = map.layers.find((layer) => layer.type === "tilelayer")
+  if (!tileLayer) return
+
+  const value = tileLayer.data?.[tileIndex]
+  if (!value) return
+
+  tileLayer.data[tileIndex] =
+    (value | FLIP_HORIZONTAL_FLAG | FLIP_DIAGONAL_FLAG) >>> 0
+}
+
 describe("createTilemap", () => {
   it("renders tile layer sprites and surfaces collision bounds", () => {
     const map = loadFixtureMap()
+    const flippedIndex = 31
+    setDiagonalHorizontalFlip(map, flippedIndex)
 
     const result = createTilemap({
       map,
@@ -120,14 +136,19 @@ describe("createTilemap", () => {
     const [tileLayer] = result.container.children
     expect(tileLayer.children.length).toBeGreaterThan(0)
 
-    const flippedSprite = tileLayer.children[31]
+    const flippedSprite = tileLayer.children[flippedIndex]
+    const column = flippedIndex % (map.layers[0].width ?? map.width)
+    const row = Math.floor(flippedIndex / (map.layers[0].width ?? map.width))
+    const expectedTx = (column + 1) * map.tilewidth
+    const expectedTy = row * map.tileheight
+
     expect(flippedSprite.appliedMatrix).toMatchObject({
       a: 0,
       b: 1,
       c: -1,
       d: 0,
-      tx: map.tilewidth * 2,
-      ty: map.tileheight,
+      tx: expectedTx,
+      ty: expectedTy,
     })
 
     expect(result.collisions).toEqual(
