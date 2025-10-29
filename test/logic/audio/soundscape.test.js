@@ -131,15 +131,15 @@ describe("soundscape audio facade", () => {
 
   it("reuses the same Howl when an effect triggers repeatedly", () => {
     registerEffectTracks({
-      "ui-click": { src: ["click.mp3"] },
+      "bell-ring": { src: ["click.mp3"] },
     })
 
-    expect(getEffectNames()).toEqual(["ui-click"])
+    expect(getEffectNames()).toEqual(["bell-ring"])
     expect(Howl.instances).toHaveLength(1)
 
-    playEffect("ui-click")
-    playEffect("ui-click")
-    playEffect("ui-click")
+    playEffect("bell-ring")
+    playEffect("bell-ring")
+    playEffect("bell-ring")
 
     const [click] = Howl.instances
     expect(click.playInvocations).toHaveLength(3)

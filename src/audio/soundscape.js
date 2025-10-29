@@ -1,4 +1,5 @@
 import { Howl } from "howler"
+import bellFxUrl from "@/assets/sound/bell.mp3"
 
 const ambienceLibrary = new Map()
 const effectLibrary = new Map()
@@ -18,8 +19,8 @@ const defaultAmbienceTracks = [
 ]
 
 const defaultEffectTracks = {
-  "ui-confirm": {
-    src: [SILENCE_WAV],
+  "bell-ring": {
+    src: [bellFxUrl],
     volume: 0.6,
   },
 }
