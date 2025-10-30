@@ -22,7 +22,7 @@
 ## Systems Pipeline
 - `managerSystems` orders the active systems: `inputSystem` → `interactionSystem` → `movementSystem` → `animationSystem` → `renderSystem`.
 - **Input** reads the keyboard component and produces normalized direction deltas alongside a `moving` flag.
-- **Interaction** inspects one-shot intents (`KeyA`) and the tile in front of the manager, finds any `Interactable` entity on that tile, and raises a runtime interaction event (ringing the bell when tagged with the `Bell` component).
+- **Interaction** inspects one-shot intents (`KeyA`), prefers the tile the manager faces, and falls back to any adjacent interactable, raising a runtime interaction event (ringing the bell when tagged with the `Bell` component).
 - **Movement** integrates velocity into the Transform using the configured move speed and resolves the facing direction (preferring vertical movement).
 - **Animation** swaps AnimatedSprite textures between idle and walk variants based on movement state while caching the current animation key.
 - **Render** copies Transform coordinates onto the Pixi sprite so visual state follows ECS data.

@@ -1,45 +1,14 @@
 import { Movement, SpriteRef, Transform } from "@/src/game/components.js"
 import { DEFAULT_DIRECTION } from "@/src/game/constants.js"
+import {
+  buildFootprint,
+  computeSpriteMetrics,
+} from "@/src/game/systems/utils/sprite-metrics.js"
 
 const resolveDirection = (dx, dy, fallback) => {
   if (dy !== 0) return dy < 0 ? "up" : "down"
   if (dx !== 0) return dx < 0 ? "left" : "right"
   return fallback
-}
-
-const getSpriteMetrics = (sprite, map) => {
-  if (!sprite) {
-    const fallback = map?.dimensions ?? {}
-    const fallbackHeight = fallback.tileheight ?? 0
-    return {
-      width: fallback.tilewidth ?? 0,
-      height: fallbackHeight > 0 ? fallbackHeight / 2 : 0,
-      offsetX: 0,
-      offsetY: fallbackHeight > 0 ? fallbackHeight / 2 : 0,
-    }
-  }
-
-  const width =
-    sprite.width ??
-    sprite?.texture?.frame?.width ??
-    sprite?.texture?.width ??
-    map?.dimensions?.tilewidth ??
-    0
-  const fullHeight =
-    sprite.height ??
-    sprite?.texture?.frame?.height ??
-    sprite?.texture?.height ??
-    map?.dimensions?.tileheight ??
-    0
-
-  const collisionHeight = fullHeight > 0 ? fullHeight / 2 : 0
-
-  return {
-    width,
-    height: collisionHeight,
-    offsetX: 0,
-    offsetY: fullHeight - collisionHeight,
-  }
 }
 
 const rectsIntersect = (a, b) => {
@@ -50,13 +19,6 @@ const rectsIntersect = (a, b) => {
     a.y + a.height > b.y
   )
 }
-
-const buildFootprint = ({ x, y, metrics }) => ({
-  x: x + metrics.offsetX,
-  y: y + metrics.offsetY,
-  width: metrics.width,
-  height: metrics.height,
-})
 
 const willCollide = ({ nextX, nextY, collisions, metrics, offset }) => {
   if (!collisions || collisions.length === 0) return false
@@ -108,7 +70,7 @@ export const movementSystem = {
 
     const map = context?.map ?? null
     const collisions = map?.collisions ?? []
-    const metrics = getSpriteMetrics(spriteRef?.sprite ?? null, map)
+    const metrics = computeSpriteMetrics(spriteRef?.sprite ?? null, map)
     const mapOffset = map?.container
       ? { x: map.container.x ?? 0, y: map.container.y ?? 0 }
       : { x: 0, y: 0 }
