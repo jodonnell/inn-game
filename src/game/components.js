@@ -45,3 +45,8 @@ export const MapLayer = defineComponent("MapLayer", () => ({
     height: 0,
   },
 }))
+
+export const Interactable = defineComponent("Interactable", () => ({
+  tile: { x: 0, y: 0 },
+  metadata: {},
+}))

@@ -119,4 +119,39 @@ describe("createGameRuntime", () => {
 
     expect(mocks.systems.run).toHaveBeenCalledWith(16, { map })
   })
+
+  it("flushes keyboard one-shot intents after each system tick", async () => {
+    const mocks = createMocks()
+    const flush = jest.fn()
+    const keyboard = { flush }
+    const { createGameRuntime } = await import(
+      "../../../../src/game/runtime/create-runtime.js"
+    )
+
+    const runtime = createGameRuntime({
+      app: mocks.app,
+      scene: mocks.scene,
+      registry: mocks.registry,
+      systems: mocks.systems,
+      components: {},
+      entities: mocks.entities,
+      keyboard,
+      map: null,
+      computeDebug: mocks.computeDebug,
+      resetEntityState: mocks.resetEntityState,
+      debugSink: jest.fn(),
+    })
+
+    runtime.start()
+    const updateCallback = mocks.ticker.add.mock.calls.at(-1)[0]
+
+    updateCallback({ deltaTime: 10 })
+    updateCallback({ deltaTime: 5 })
+
+    expect(flush).toHaveBeenCalledTimes(2)
+    expect(mocks.systems.run).toHaveBeenCalledTimes(2)
+    const firstRunOrder = mocks.systems.run.mock.invocationCallOrder?.[0] ?? 0
+    const firstFlushOrder = flush.mock.invocationCallOrder?.[0] ?? 0
+    expect(firstFlushOrder).toBeGreaterThan(firstRunOrder)
+  })
 })

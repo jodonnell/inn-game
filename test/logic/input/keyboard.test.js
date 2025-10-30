@@ -27,9 +27,6 @@ describe("createKeyboardInput", () => {
     const firstFramePressed = [...keyboard.justPressed]
     expect(firstFramePressed).toContain("KeyA")
 
-    keyboard.flush?.()
-    expect(keyboard.justPressed).not.toContain("KeyA")
-
     handleKeyUp({ code: "KeyA", preventDefault: jest.fn() })
     expect(keyboard.pressed.has("KeyA")).toBe(false)
 
@@ -57,5 +54,25 @@ describe("createKeyboardInput", () => {
     handleKeyUp({ code: "KeyB", preventDefault: jest.fn() })
     expect(keyboard.pressed.size).toBe(0)
     expect(keyboard.justPressed.length ?? 0).toBe(0)
+  })
+
+  it("clears justPressed entries through flush between runtime ticks", () => {
+    const target = {
+      addEventListener: jest.fn(),
+      removeEventListener: jest.fn(),
+    }
+    const keyboard = createKeyboardInput(target)
+    const handleKeyDown = getListener(target, "keydown")
+    const handleKeyUp = getListener(target, "keyup")
+
+    handleKeyDown({ code: "KeyA", preventDefault: jest.fn() })
+    expect(keyboard.justPressed).toContain("KeyA")
+
+    keyboard.flush?.()
+    expect(keyboard.justPressed).toHaveLength(0)
+
+    handleKeyUp({ code: "KeyA", preventDefault: jest.fn() })
+    handleKeyDown({ code: "KeyA", preventDefault: jest.fn() })
+    expect(keyboard.justPressed).toEqual(["KeyA"])
   })
 })

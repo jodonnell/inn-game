@@ -51,6 +51,7 @@ export const createGameRuntime = ({
   let running = false
   const handleTick = (ticker) => {
     systems.run(ticker.deltaTime, { map })
+    keyboard?.flush?.()
     publishDebug()
   }
 
