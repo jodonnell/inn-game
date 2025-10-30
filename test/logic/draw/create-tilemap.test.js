@@ -158,6 +158,15 @@ describe("createTilemap", () => {
       ]),
     )
 
+    expect(result.interactables).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          type: "bell",
+          tile: { x: 12, y: 5 },
+        }),
+      ]),
+    )
+
     expect(result.dimensions).toEqual({
       tilewidth: map.tilewidth,
       tileheight: map.tileheight,

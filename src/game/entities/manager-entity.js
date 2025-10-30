@@ -33,7 +33,10 @@ export const createManagerEntity = (registry, { sprite, animations, keyboard }) 
   registry.addComponent(entity, SpriteRef, { sprite })
   registry.addComponent(entity, AnimationSet, { animations })
   registry.addComponent(entity, AnimationState, { currentKey: "" })
-  registry.addComponent(entity, InputState, { pressed: keyboard.pressed })
+  registry.addComponent(entity, InputState, {
+    pressed: keyboard.pressed,
+    justPressed: keyboard.justPressed,
+  })
 
   const defaultVariant =
     animations[DEFAULT_DIRECTION] ??

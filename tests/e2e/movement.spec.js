@@ -1,22 +1,5 @@
 import { test, expect } from "@playwright/test"
-
-const readyGame = async (page) => {
-  await page.goto("/")
-
-  const canvas = page.locator("canvas").first()
-  await expect(canvas).toBeVisible()
-  await canvas.click()
-
-  await page.waitForFunction(() => {
-    const game = window.__innGame
-    return Boolean(
-      game &&
-        game.ecs &&
-        game.ecs.entities?.manager !== undefined &&
-        game.debug,
-    )
-  })
-}
+import { readyGame } from "./utils/game-helpers.js"
 
 const readGameState = async (page) => {
   return page.evaluate(() => {

@@ -1,22 +1,5 @@
 import { test, expect } from "@playwright/test"
-
-const readyGame = async (page) => {
-  await page.goto("/")
-
-  const canvas = page.locator("canvas").first()
-  await expect(canvas).toBeVisible()
-  await canvas.click()
-
-  await page.waitForFunction(() => {
-    const game = window.__innGame
-    return Boolean(
-      game &&
-        game.scene?.world &&
-        game.map?.container &&
-        game.ecs?.entities?.manager !== undefined,
-    )
-  })
-}
+import { readyGame } from "./utils/game-helpers.js"
 
 test.describe("Scene layering", () => {
   test("renders the map beneath the manager sprite", async ({ page }) => {

@@ -37,6 +37,16 @@ const createMocks = () => {
     map: 2,
   }
 
+  const interactions = {
+    findByTile: jest.fn(),
+    trigger: jest.fn(),
+  }
+
+  const audio = {
+    playBell: jest.fn(),
+    loadBell: jest.fn(),
+  }
+
   return {
     registry,
     systems,
@@ -47,6 +57,8 @@ const createMocks = () => {
     scene,
     components,
     entities,
+    interactions,
+    audio,
   }
 }
 
@@ -74,6 +86,8 @@ describe("createGameRuntime", () => {
       entities: mocks.entities,
       keyboard: {},
       map,
+      interactions: mocks.interactions,
+      audio: mocks.audio,
       computeDebug: mocks.computeDebug,
       resetEntityState: mocks.resetEntityState,
       debugSink: jest.fn(),
@@ -83,12 +97,16 @@ describe("createGameRuntime", () => {
     const startCallback = mocks.ticker.add.mock.calls.at(-1)[0]
     startCallback({ deltaTime: 16 })
 
+    expect(mocks.audio.loadBell).toHaveBeenCalledTimes(1)
+
     const snapshot = runtime.snapshot()
     expect(snapshot.map).toBe(map)
     expect(snapshot.map).toMatchObject({
       collisions: [{ id: 1 }],
       dimensions: expect.objectContaining({ tilewidth: 32 }),
     })
+    expect(snapshot.interactions).toBe(mocks.interactions)
+    expect(snapshot.audio).toBe(mocks.audio)
   })
 
   it("passes map context into system runner", async () => {
@@ -108,16 +126,23 @@ describe("createGameRuntime", () => {
       entities: mocks.entities,
       keyboard: {},
       map,
+      interactions: mocks.interactions,
+      audio: mocks.audio,
       computeDebug: mocks.computeDebug,
       resetEntityState: mocks.resetEntityState,
       debugSink: jest.fn(),
     })
 
     runtime.start()
+    expect(mocks.audio.loadBell).toHaveBeenCalledTimes(1)
     const updateCallback = mocks.ticker.add.mock.calls.at(-1)[0]
     updateCallback({ deltaTime: 16 })
 
-    expect(mocks.systems.run).toHaveBeenCalledWith(16, { map })
+    expect(mocks.systems.run).toHaveBeenCalledWith(16, {
+      map,
+      interactions: mocks.interactions,
+      audio: mocks.audio,
+    })
   })
 
   it("flushes keyboard one-shot intents after each system tick", async () => {
@@ -137,12 +162,15 @@ describe("createGameRuntime", () => {
       entities: mocks.entities,
       keyboard,
       map: null,
+      interactions: mocks.interactions,
+      audio: mocks.audio,
       computeDebug: mocks.computeDebug,
       resetEntityState: mocks.resetEntityState,
       debugSink: jest.fn(),
     })
 
     runtime.start()
+    expect(mocks.audio.loadBell).toHaveBeenCalledTimes(1)
     const updateCallback = mocks.ticker.add.mock.calls.at(-1)[0]
 
     updateCallback({ deltaTime: 10 })

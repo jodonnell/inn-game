@@ -1,4 +1,5 @@
 import { Container, Matrix, Rectangle, Sprite, Texture } from "pixi.js"
+import { extractInteractables } from "@/src/game/map/interactables.js"
 
 const FLIP_HORIZONTAL_FLAG = 0x80000000
 const FLIP_VERTICAL_FLAG = 0x40000000
@@ -161,6 +162,7 @@ export const createTilemap = ({ map, tileset, texture }) => {
 
   const layers = []
   const collisions = []
+  const interactables = extractInteractables(map)
 
   for (const layer of map.layers ?? []) {
     if (layer.type === "tilelayer") {
@@ -184,6 +186,7 @@ export const createTilemap = ({ map, tileset, texture }) => {
   return {
     container,
     collisions,
+    interactables,
     layers,
     dimensions: {
       tilewidth: map.tilewidth,

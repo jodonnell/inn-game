@@ -1,5 +1,6 @@
 import { describe, expect, it, jest } from "@jest/globals"
 import {
+  Bell,
   InputState,
   Interactable,
   Movement,
@@ -35,6 +36,10 @@ describe("interactionSystem", () => {
       trigger: jest.fn(),
     }
 
+    const audio = {
+      playBell: jest.fn(),
+    }
+
     const interactable = Interactable.create({
       tile: { x: 3, y: 3 },
       metadata: { interaction: "bell" },
@@ -49,7 +54,8 @@ describe("interactionSystem", () => {
       }),
       hasComponent: jest.fn(
         (entity, component) =>
-          entity === interactableEntity && component === Interactable,
+          entity === interactableEntity &&
+          (component === Interactable || component === Bell),
       ),
     }
 
@@ -65,7 +71,7 @@ describe("interactionSystem", () => {
       entity: managerEntity,
       components: { InputState: input, Movement: movement, Transform: transform },
       registry,
-      context,
+      context: { ...context, audio },
     })
 
     expect(interactions.findByTile).toHaveBeenCalledWith({ x: 3, y: 3 })
@@ -78,6 +84,7 @@ describe("interactionSystem", () => {
       target: interactableEntity,
       data: interactable,
     })
+    expect(audio.playBell).toHaveBeenCalledWith(interactable.metadata)
     expect(input.justPressed).toEqual(["KeyB"])
 
     interactions.findByTile.mockClear()
@@ -87,11 +94,12 @@ describe("interactionSystem", () => {
       entity: managerEntity,
       components: { InputState: input, Movement: movement, Transform: transform },
       registry,
-      context,
+      context: { ...context, audio },
     })
 
     expect(interactions.findByTile).not.toHaveBeenCalled()
     expect(interactions.trigger).not.toHaveBeenCalled()
+    expect(audio.playBell).toHaveBeenCalledTimes(1)
   })
 
   it("ignores input when KeyA is not freshly pressed", async () => {

@@ -5,11 +5,13 @@ import { createRegistry, createSystemRunner } from "@/src/core/ecs/index.js"
 import {
   AnimationSet,
   AnimationState,
+  Bell,
   InputState,
+  Interactable,
+  MapLayer,
   Movement,
   SpriteRef,
   Transform,
-  MapLayer,
 } from "@/src/game/components.js"
 import {
   computeManagerDebug,
@@ -28,6 +30,7 @@ import {
 } from "@/src/game/resources/map-resources.js"
 import { createGameRuntime } from "@/src/game/runtime/create-runtime.js"
 import { managerSystems } from "@/src/game/systems/index.js"
+import { createInteractions } from "@/src/game/interactions/index.js"
 
 const registerSystems = (systems) => {
   for (const system of managerSystems) {
@@ -36,10 +39,32 @@ const registerSystems = (systems) => {
   return systems
 }
 
+const createInteractableEntities = (registry, interactables = []) => {
+  const created = []
+  for (const definition of interactables) {
+    const entity = registry.createEntity()
+    registry.addComponent(entity, Interactable, {
+      tile: {
+        x: definition.tile?.x ?? 0,
+        y: definition.tile?.y ?? 0,
+      },
+      metadata: { ...(definition.metadata ?? {}) },
+    })
+
+    if (definition.type === "bell") {
+      registry.addComponent(entity, Bell, {})
+    }
+
+    created.push(entity)
+  }
+  return created
+}
+
 export const test = async ({
   debugSink,
   keyboardTarget,
   keyboardFactory = createKeyboardInput,
+  audio,
 } = {}) => {
   const scene = await createScene()
   const { app, world } = scene
@@ -54,6 +79,7 @@ export const test = async ({
 
   const registry = createRegistry()
   const systems = registerSystems(createSystemRunner(registry))
+  const interactions = createInteractions(registry)
 
   const createInput = keyboardFactory ?? createKeyboardInput
   const keyboard =
@@ -68,8 +94,10 @@ export const test = async ({
     container: map.container,
     collisions: map.collisions,
     layers: map.layers,
+    interactables: map.interactables,
     dimensions: map.dimensions,
   })
+  createInteractableEntities(registry, map.interactables)
 
   const runtime = createGameRuntime({
     app,
@@ -85,6 +113,8 @@ export const test = async ({
       AnimationSet,
       AnimationState,
       InputState,
+      Interactable,
+      Bell,
     },
     entities: {
       manager: managerEntity,
@@ -94,12 +124,15 @@ export const test = async ({
       container: map.container,
       collisions: map.collisions,
       layers: map.layers,
+      interactables: map.interactables,
       dimensions: map.dimensions,
       entity: mapEntity,
     },
     computeDebug: () => computeManagerDebug(registry, managerEntity),
     resetEntityState: () => resetManagerState(registry, managerEntity),
     debugSink,
+    interactions,
+    audio,
   })
 
   if (!debugSink && typeof window !== "undefined") {

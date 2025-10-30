@@ -32,12 +32,14 @@ export const AnimationState = defineComponent("AnimationState", () => ({
 
 export const InputState = defineComponent("InputState", () => ({
   pressed: new Set(),
+  justPressed: [],
 }))
 
 export const MapLayer = defineComponent("MapLayer", () => ({
   container: null,
   collisions: [],
   layers: [],
+  interactables: [],
   dimensions: {
     tilewidth: 0,
     tileheight: 0,
@@ -50,3 +52,5 @@ export const Interactable = defineComponent("Interactable", () => ({
   tile: { x: 0, y: 0 },
   metadata: {},
 }))
+
+export const Bell = defineComponent("Bell", () => ({}))

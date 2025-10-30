@@ -1,6 +1,7 @@
 import { Assets, Texture } from "pixi.js"
 import rawMap from "@/assets/maps/inn.json"
 import tileSheetUrl from "@/assets/spritesheets/tile-sheet.png?url"
+import { extractInteractables } from "@/src/game/map/interactables.js"
 
 const cloneMapData = () => JSON.parse(JSON.stringify(rawMap))
 
@@ -43,5 +44,6 @@ export const loadMapResources = async () => {
     map,
     tileset: buildTilesetMetadata(map, texture),
     texture,
+    interactables: extractInteractables(map),
   }
 }

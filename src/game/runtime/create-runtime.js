@@ -1,3 +1,6 @@
+import { createBellAudio } from "@/src/audio/bell.js"
+import { createInteractions } from "@/src/game/interactions/index.js"
+
 const noop = () => {}
 
 export const createGameRuntime = ({
@@ -12,8 +15,18 @@ export const createGameRuntime = ({
   computeDebug,
   resetEntityState,
   debugSink,
+  interactions: providedInteractions,
+  audio: providedAudio,
 }) => {
   let sink = debugSink ?? noop
+  const interactions = providedInteractions ?? createInteractions(registry)
+  const bellAudio = createBellAudio()
+  const audio =
+    providedAudio ??
+    {
+      playBell: (metadata) => bellAudio.playBell(metadata),
+      loadBell: () => bellAudio.load(),
+    }
   const runtime = {
     app,
     scene: {
@@ -30,6 +43,8 @@ export const createGameRuntime = ({
     managerEntity: entities.manager,
     map,
     debug: {},
+    interactions,
+    audio,
   }
 
   const publishDebug = () => {
@@ -50,7 +65,7 @@ export const createGameRuntime = ({
 
   let running = false
   const handleTick = (ticker) => {
-    systems.run(ticker.deltaTime, { map })
+    systems.run(ticker.deltaTime, { map, interactions, audio })
     keyboard?.flush?.()
     publishDebug()
   }
@@ -58,6 +73,7 @@ export const createGameRuntime = ({
   runtime.start = () => {
     if (running) return
     running = true
+    audio.loadBell?.()
     app.ticker.add(handleTick)
     publishDebug()
   }
@@ -82,6 +98,8 @@ export const createGameRuntime = ({
     managerEntity: runtime.managerEntity,
     map: runtime.map,
     debug: runtime.debug,
+    interactions: runtime.interactions,
+    audio: runtime.audio,
   })
 
   return runtime

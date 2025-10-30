@@ -53,6 +53,22 @@ describe("map-resources", () => {
     expect(mockTextureFrom).toHaveBeenCalledWith(tileSheetUrl)
   })
 
+  it("exposes interactable definitions flagged within the map objects", async () => {
+    const resources = await loadMapResources()
+    const { interactables } = resources
+
+    expect(Array.isArray(interactables)).toBe(true)
+    expect(interactables).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          type: "bell",
+          tile: { x: 12, y: 5 },
+          layer: "collision",
+        }),
+      ]),
+    )
+  })
+
   it("creates a defensive copy of the map payload", async () => {
     const resources = await loadMapResources()
     resources.map.layers[0].name = "mutated"
