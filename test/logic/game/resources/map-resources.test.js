@@ -1,13 +1,15 @@
 import { beforeEach, describe, expect, it, jest } from "@jest/globals"
 import tileSheetUrl from "@/assets/spritesheets/tile-sheet.png?url"
 
-const mockAssetsLoad = jest.fn(() => Promise.resolve())
+const createMockLoad = () => Promise.resolve()
+const mockAssetsLoad = jest.fn(createMockLoad)
 const textureSource = { width: 2048, height: 6336 }
-const mockTextureFrom = jest.fn(() => ({
+const buildTexture = () => ({
   source: textureSource,
   width: textureSource.width,
   height: textureSource.height,
-}))
+})
+const mockTextureFrom = jest.fn(buildTexture)
 
 await jest.unstable_mockModule("pixi.js", () => ({
   Assets: {
@@ -25,7 +27,9 @@ const {
 
 describe("map-resources", () => {
   beforeEach(() => {
+    mockAssetsLoad.mockImplementation(createMockLoad)
     mockAssetsLoad.mockClear()
+    mockTextureFrom.mockImplementation(buildTexture)
     mockTextureFrom.mockClear()
   })
 

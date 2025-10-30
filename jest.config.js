@@ -6,4 +6,6 @@ export default {
     "\\.(png|jpg|jpeg|gif|svg|mp3|ogg|wav)$": "<rootDir>/config/jest/url-stub.js",
     "^@/(.*)$": "<rootDir>/$1",
   },
+  clearMocks: true,
+  resetMocks: true,
 }

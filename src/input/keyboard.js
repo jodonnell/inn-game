@@ -1,16 +1,23 @@
 const createKeyboardAdapter = (target) => {
   const pressed = new Set()
+  const justPressed = []
 
   const handleKeyDown = (event) => {
-    if (!event.code.startsWith("Arrow")) return
+    const code = event.code
+    if (!code.startsWith("Arrow") && code !== "KeyA") return
     event.preventDefault()
-    pressed.add(event.code)
+    const isRepeat = pressed.has(code)
+    pressed.add(code)
+    if (code === "KeyA" && !isRepeat) {
+      justPressed.push(code)
+    }
   }
 
   const handleKeyUp = (event) => {
-    if (!event.code.startsWith("Arrow")) return
+    const code = event.code
+    if (!code.startsWith("Arrow") && code !== "KeyA") return
     event.preventDefault()
-    pressed.delete(event.code)
+    pressed.delete(code)
   }
 
   target?.addEventListener?.("keydown", handleKeyDown)
@@ -18,9 +25,15 @@ const createKeyboardAdapter = (target) => {
 
   return {
     pressed,
+    justPressed,
+    flush: () => {
+      justPressed.length = 0
+    },
     dispose: () => {
       target?.removeEventListener?.("keydown", handleKeyDown)
       target?.removeEventListener?.("keyup", handleKeyUp)
+      pressed.clear()
+      justPressed.length = 0
     },
   }
 }
