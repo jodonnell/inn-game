@@ -46,7 +46,11 @@ const getActorTile = (transform, map, sprite) => {
   }
 }
 
-const collectCandidateTiles = (actorTile, facing) => {
+const MAX_FACING_DISTANCE = 3
+const MAX_INTERACTION_DISTANCE = 16
+const INTERACTION_DISTANCE_TOLERANCE = 4
+
+const collectCandidateTiles = (actorTile, facing, maxDistance = 1) => {
   if (!actorTile) return []
 
   const candidates = []
@@ -61,13 +65,43 @@ const collectCandidateTiles = (actorTile, facing) => {
 
   if (facing && directionOffsets[facing]) {
     const offset = directionOffsets[facing]
-    add({ x: actorTile.x + offset.x, y: actorTile.y + offset.y })
+    const limit = Number.isFinite(maxDistance) ? Math.max(1, maxDistance) : 1
+    const perpendicularOffsets =
+      facing === "up" || facing === "down"
+        ? [
+            { x: 1, y: 0 },
+            { x: -1, y: 0 },
+          ]
+        : [
+            { x: 0, y: 1 },
+            { x: 0, y: -1 },
+        ]
+
+    for (let step = 1; step <= limit; step += 1) {
+      const forwardTile = {
+        x: actorTile.x + offset.x * step,
+        y: actorTile.y + offset.y * step,
+      }
+      add(forwardTile)
+
+      const lateralLimit = limit
+      for (let lateral = 1; lateral <= lateralLimit; lateral += 1) {
+        for (const perp of perpendicularOffsets) {
+          add({
+            x: forwardTile.x + perp.x * lateral,
+            y: forwardTile.y + perp.y * lateral,
+          })
+        }
+      }
+    }
   }
 
   add(actorTile)
 
-  for (const offset of Object.values(directionOffsets)) {
-    add({ x: actorTile.x + offset.x, y: actorTile.y + offset.y })
+  if (!facing || !directionOffsets[facing]) {
+    for (const offset of Object.values(directionOffsets)) {
+      add({ x: actorTile.x + offset.x, y: actorTile.y + offset.y })
+    }
   }
 
   return candidates
@@ -108,13 +142,92 @@ export const interactionSystem = {
     }
 
     const spriteRef = registry?.getComponent?.(entity, SpriteRef)
-    const actorTile = getActorTile(transform, map, spriteRef?.sprite ?? null)
-    const candidates = collectCandidateTiles(actorTile, movement?.direction)
+    const sprite = spriteRef?.sprite ?? null
+    const actorTile = getActorTile(transform, map, sprite)
+    const tileDimensions = map?.dimensions ?? {}
+    const tileWidth = tileDimensions.tilewidth ?? 0
+    const tileHeight = tileDimensions.tileheight ?? 0
+    const mapOffsetX = map?.container?.x ?? 0
+    const mapOffsetY = map?.container?.y ?? 0
+    const metrics = computeSpriteMetrics(sprite, map)
+    const footprint = buildFootprint({
+      x: transform?.x ?? 0,
+      y: transform?.y ?? 0,
+      metrics,
+    })
+    const footprintWidth = footprint.width ?? 0
+    const footprintHeight = footprint.height ?? 0
+    const footprintOffsetY = metrics?.offsetY ?? 0
+    const actorRect = {
+      left: footprint.x,
+      right: footprint.x + footprintWidth,
+      top: footprint.y - footprintOffsetY,
+      bottom: footprint.y + footprintHeight,
+    }
+    const actorFoot = {
+      x: footprint.x + (footprint.width ?? 0) / 2,
+      y: footprint.y + (footprint.height ?? 0),
+    }
+    const candidates = collectCandidateTiles(
+      actorTile,
+      movement?.direction,
+      MAX_FACING_DISTANCE,
+    )
+    const facingOffset =
+      movement?.direction && directionOffsets[movement.direction]
 
     let target = null
     let data = null
 
     for (const tile of candidates) {
+      let targetFootX = null
+      let targetFootY = null
+      let deltaX = null
+      let deltaY = null
+
+      const canMeasure =
+        Number.isFinite(actorFoot.x) &&
+        Number.isFinite(actorFoot.y) &&
+        Number.isFinite(tileWidth) &&
+        Number.isFinite(tileHeight) &&
+        tileWidth > 0 &&
+        tileHeight > 0
+
+      if (canMeasure) {
+        const tileLeft = mapOffsetX + tile.x * tileWidth
+        const tileTop = mapOffsetY + tile.y * tileHeight
+        const tileRight = tileLeft + tileWidth
+        const tileBottom = tileTop + tileHeight
+        targetFootX = tileLeft + tileWidth / 2
+        targetFootY = tileBottom
+        deltaX = targetFootX - actorFoot.x
+        deltaY = targetFootY - actorFoot.y
+
+        const horizontalGap = Math.max(
+          0,
+          tileLeft - (actorRect.right ?? actorFoot.x),
+          (actorRect.left ?? actorFoot.x) - tileRight,
+        )
+        const verticalGap = Math.max(
+          0,
+          tileTop - (actorRect.bottom ?? actorFoot.y),
+          (actorRect.top ?? actorFoot.y) - tileBottom,
+        )
+
+        const distance = Math.hypot(horizontalGap, verticalGap)
+        if (
+          distance >
+          MAX_INTERACTION_DISTANCE + INTERACTION_DISTANCE_TOLERANCE
+        ) {
+          continue
+        }
+      }
+
+      if (facingOffset && canMeasure) {
+        const dot = deltaX * facingOffset.x + deltaY * facingOffset.y
+        if (dot < -INTERACTION_DISTANCE_TOLERANCE) continue
+      }
+
       const candidate = interactions.findByTile(tile)
       if (!candidate) continue
       const component = registry?.getComponent?.(candidate, Interactable)

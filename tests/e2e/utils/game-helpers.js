@@ -6,8 +6,9 @@ export const readyGame = async (
 ) => {
   await page.goto("/")
 
+  await page.waitForSelector("canvas", { timeout: 15000 })
   const canvas = page.locator("canvas").first()
-  await expect(canvas).toBeVisible()
+  await expect(canvas).toBeVisible({ timeout: 15000 })
   await canvas.click()
 
   await page.waitForFunction(
@@ -37,9 +38,12 @@ export const readyGame = async (
   }
 }
 
-export const positionManager = async (page, { x, y, direction = null } = {}) => {
+export const positionManager = async (
+  page,
+  { x, y, direction = null, animationKey = null } = {},
+) => {
   await page.evaluate(
-    ({ x: nextX, y: nextY, direction: nextDirection }) => {
+    ({ x: nextX, y: nextY, direction: nextDirection, animationKey: nextAnimationKey }) => {
       const runtime = window.__innGame
       if (!runtime) throw new Error("Runtime not available")
 
@@ -52,6 +56,10 @@ export const positionManager = async (page, { x, y, direction = null } = {}) => 
       const transform = registry.getComponent(manager, components.Transform)
       const spriteRef = registry.getComponent(manager, components.SpriteRef)
       const movement = registry.getComponent(manager, components.Movement)
+      const animationState = registry.getComponent(
+        manager,
+        components.AnimationState,
+      )
 
       if (transform) {
         if (typeof nextX === "number") transform.x = nextX
@@ -69,8 +77,12 @@ export const positionManager = async (page, { x, y, direction = null } = {}) => 
         movement.dx = 0
         movement.dy = 0
       }
+
+      if (animationState && nextAnimationKey) {
+        animationState.currentKey = nextAnimationKey
+      }
     },
-    { x, y, direction },
+    { x, y, direction, animationKey },
   )
 }
 
@@ -81,12 +93,16 @@ export const withBellMonitor = async (page, run) => {
 
     window.__bellCallCount = 0
     window.__bellLastMetadata = null
+    window.__bellStartTime = performance.now()
+    window.__bellLastElapsed = null
 
     const originalPlayBell = runtime.audio.playBell?.bind(runtime.audio)
     runtime.audio.__originalPlayBell = runtime.audio.playBell
     runtime.audio.playBell = (metadata) => {
       window.__bellCallCount = (window.__bellCallCount ?? 0) + 1
       window.__bellLastMetadata = metadata
+      window.__bellLastElapsed =
+        performance.now() - (window.__bellStartTime ?? performance.now())
       return originalPlayBell?.(metadata)
     }
 
@@ -106,6 +122,8 @@ export const withBellMonitor = async (page, run) => {
 
       delete window.__bellCallCount
       delete window.__bellLastMetadata
+      delete window.__bellStartTime
+      delete window.__bellLastElapsed
     })
   }
 }
