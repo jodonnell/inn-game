@@ -96,13 +96,14 @@ const collectCandidateTiles = (actorTile, facing, maxDistance = 1) => {
     }
   }
 
-  add(actorTile)
-
-  if (!facing || !directionOffsets[facing]) {
+  const addAdjacentTiles = () => {
     for (const offset of Object.values(directionOffsets)) {
       add({ x: actorTile.x + offset.x, y: actorTile.y + offset.y })
     }
   }
+
+  add(actorTile)
+  addAdjacentTiles()
 
   return candidates
 }

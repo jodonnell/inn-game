@@ -3,76 +3,23 @@ import {
   positionManager,
   readyGame,
   withBellMonitor,
+  bellPlacements,
+  placeManagerNextToSprite,
+  waitForManagerDebugState,
+  collectInteractableSnapshot,
 } from "./utils/game-helpers.js"
 
-const computeFootPlacement = async (page, tileOffset) => {
-  return page.evaluate(({ tileOffset }) => {
-    const runtime = window.__innGame
-    if (!runtime) throw new Error("Runtime not available")
+const placeManagerBesideBell = (page, options) =>
+  placeManagerNextToSprite(page, bellPlacements.left, options)
 
-    const bell = runtime.map?.interactables?.find(
-      (entry) => entry?.type === "bell",
-    )
-    if (!bell) throw new Error("Bell interactable not found")
+const placeManagerBelowBell = (page, options) =>
+  placeManagerNextToSprite(page, bellPlacements.below, options)
 
-    const tileWidth = runtime.map?.dimensions?.tilewidth ?? 32
-    const tileHeight = runtime.map?.dimensions?.tileheight ?? 32
-    const offsetX = runtime.map?.container?.x ?? 0
-    const offsetY = runtime.map?.container?.y ?? 0
+const placeManagerAboveBell = (page, options) =>
+  placeManagerNextToSprite(page, bellPlacements.above, options)
 
-    const targetTileX = bell.tile?.x + tileOffset.x
-    const targetTileY = bell.tile?.y + tileOffset.y
-    if (targetTileX == null || targetTileY == null) {
-      throw new Error("Bell tile coordinates missing")
-    }
-
-    const { registry, components, entities } = runtime.ecs ?? {}
-    const manager = entities?.manager
-    const spriteRef = registry?.getComponent?.(manager, components.SpriteRef)
-    const sprite = spriteRef?.sprite
-
-    const width =
-      sprite?.width ??
-      sprite?.texture?.frame?.width ??
-      sprite?.texture?.width ??
-      tileWidth
-    const fullHeight =
-      sprite?.height ??
-      sprite?.texture?.frame?.height ??
-      sprite?.texture?.height ??
-      tileHeight
-    const footprintHeight = fullHeight > 0 ? fullHeight / 2 : 0
-
-    const offsetFootY = fullHeight - footprintHeight
-    const centerX = offsetX + targetTileX * tileWidth + tileWidth / 2
-    const footY = offsetY + (targetTileY + 1) * tileHeight - 1
-
-    return {
-      x: centerX - width / 2,
-      y: footY - offsetFootY - footprintHeight,
-    }
-  }, { tileOffset })
-}
-
-const placeManagerBesideBell = async (page) => {
-  const target = await computeFootPlacement(page, { x: -1, y: 0 })
-  await positionManager(page, { ...target, direction: "right" })
-}
-
-const placeManagerBelowBell = async (page) => {
-  const target = await computeFootPlacement(page, { x: 0, y: 1 })
-  await positionManager(page, { ...target, direction: "up" })
-}
-
-const placeManagerAboveBell = async (page) => {
-  const target = await computeFootPlacement(page, { x: 0, y: -1 })
-  await positionManager(page, { ...target, direction: "down" })
-}
-
-const placeManagerRightOfBell = async (page) => {
-  const target = await computeFootPlacement(page, { x: 1, y: 0 })
-  await positionManager(page, { ...target, direction: "left" })
-}
+const placeManagerRightOfBell = (page, options) =>
+  placeManagerNextToSprite(page, bellPlacements.right, options)
 
 const waitForBellCount = async (
   page,
@@ -93,62 +40,9 @@ const waitForBellCount = async (
       { timeout: 200 },
     )
   } catch (error) {
-    const snapshot = await page.evaluate(() => {
-      const runtime = window.__innGame
-      const bell = runtime?.map?.interactables?.find(
-        (entry) => entry?.type === "bell",
-      )
-      const map = runtime?.map
-      const dimensions = map?.dimensions ?? {}
-      const tilewidth = dimensions.tilewidth ?? 0
-      const tileheight = dimensions.tileheight ?? 0
-      const offsetX = map?.container?.x ?? 0
-      const offsetY = map?.container?.y ?? 0
-      const { registry, components, entities } = runtime?.ecs ?? {}
-      const manager = entities?.manager
-      const transform = registry?.getComponent?.(manager, components?.Transform)
-      const spriteRef = registry?.getComponent?.(manager, components?.SpriteRef)
-      const sprite = spriteRef?.sprite ?? null
-      const width =
-        sprite?.width ??
-        sprite?.texture?.frame?.width ??
-        sprite?.texture?.width ??
-        tilewidth
-      const fullHeight =
-        sprite?.height ??
-        sprite?.texture?.frame?.height ??
-        sprite?.texture?.height ??
-        tileheight
-      const collisionHeight = fullHeight > 0 ? fullHeight / 2 : 0
-      const footprintX = (transform?.x ?? 0) + 0
-      const footprintY = (transform?.y ?? 0) + (fullHeight - collisionHeight)
-      const centerX = footprintX + width / 2
-      const footY = footprintY + collisionHeight - 1
-      const localX = centerX - offsetX
-      const localFootY = footY - offsetY
-      const actorFootX = centerX
-      const actorFootY = footY
-      const bellFootX = offsetX + (bell?.tile?.x ?? 0) * tilewidth + tilewidth / 2
-      const bellFootY = offsetY + ((bell?.tile?.y ?? 0) + 1) * tileheight - 1
-      const actorTile =
-        tilewidth > 0 && tileheight > 0
-          ? {
-              x: Math.floor(localX / tilewidth),
-              y: Math.floor(localFootY / tileheight),
-            }
-          : null
-      const distance = Math.hypot(bellFootX - actorFootX, bellFootY - actorFootY)
-      return {
-        count: window.__bellCallCount ?? 0,
-        metadata: window.__bellLastMetadata ?? null,
-        debug: runtime?.debug ?? null,
-        bellTile: bell?.tile ?? null,
-        actorTile,
-        elapsed: window.__bellLastElapsed ?? null,
-        actorFoot: { x: actorFootX, y: actorFootY },
-        bellFoot: { x: bellFootX, y: bellFootY },
-        distance,
-      }
+    const snapshot = await collectInteractableSnapshot(page, {
+      interactable: { type: "bell", index: 0 },
+      includeBellMonitor: true,
     })
     throw new Error(
       `${description} within 200ms not satisfied: ${JSON.stringify(snapshot)}`,
@@ -197,30 +91,7 @@ test.describe("Bell interaction", () => {
     page,
   }) => {
     await readyGame(page, { waitForDebug: true })
-    const targetBase = await computeFootPlacement(page, { x: 0, y: 0 })
-    const targetPosition = {
-      ...targetBase,
-      direction: "up",
-      animationKey: "idle-up",
-    }
-
-    await positionManager(page, targetPosition)
-
-    await page.waitForFunction(
-      ({ x, y, direction, animationKey }) => {
-        const debug = window.__innGame?.debug
-        if (!debug) return false
-        const within = (value, expected) =>
-          Math.abs((value ?? 0) - expected) < 0.01
-        return (
-          within(debug.x, x) &&
-          within(debug.y, y) &&
-          debug.direction === direction &&
-          debug.animationKey === animationKey
-        )
-      },
-      targetPosition,
-    )
+    await placeManagerNextToSprite(page, bellPlacements.debug, { verifyDebug: true })
 
     await withBellMonitor(page, async () => {
       await page.keyboard.press("KeyA")
@@ -234,30 +105,7 @@ test.describe("Bell interaction", () => {
     page,
   }) => {
     await readyGame(page, { waitForDebug: true })
-    const targetBase = await computeFootPlacement(page, { x: -1, y: 0 })
-    const targetPosition = {
-      ...targetBase,
-      direction: "right",
-      animationKey: "idle-right",
-    }
-
-    await positionManager(page, targetPosition)
-
-    await page.waitForFunction(
-      ({ x, y, direction, animationKey }) => {
-        const debug = window.__innGame?.debug
-        if (!debug) return false
-        const within = (value, expected) =>
-          Math.abs((value ?? 0) - expected) < 0.01
-        return (
-          within(debug.x, x) &&
-          within(debug.y, y) &&
-          debug.direction === direction &&
-          debug.animationKey === animationKey
-        )
-      },
-      targetPosition,
-    )
+    await placeManagerNextToSprite(page, bellPlacements.left, { verifyDebug: true })
 
     await withBellMonitor(page, async () => {
       await page.keyboard.press("KeyA")
@@ -271,30 +119,7 @@ test.describe("Bell interaction", () => {
     page,
   }) => {
     await readyGame(page, { waitForDebug: true })
-    const targetBase = await computeFootPlacement(page, { x: 1, y: 0 })
-    const targetPosition = {
-      ...targetBase,
-      direction: "left",
-      animationKey: "idle-left",
-    }
-
-    await positionManager(page, targetPosition)
-
-    await page.waitForFunction(
-      ({ x, y, direction, animationKey }) => {
-        const debug = window.__innGame?.debug
-        if (!debug) return false
-        const within = (value, expected) =>
-          Math.abs((value ?? 0) - expected) < 0.01
-        return (
-          within(debug.x, x) &&
-          within(debug.y, y) &&
-          debug.direction === direction &&
-          debug.animationKey === animationKey
-        )
-      },
-      targetPosition,
-    )
+    await placeManagerNextToSprite(page, bellPlacements.right, { verifyDebug: true })
 
     await withBellMonitor(page, async () => {
       await page.keyboard.press("KeyA")
@@ -308,29 +133,10 @@ test.describe("Bell interaction", () => {
     page,
   }) => {
     await readyGame(page, { waitForDebug: true })
-    const targetPosition = {
-      x: 381.40825293108605,
-      y: 108.64094115100276,
-      direction: "up",
-      animationKey: "idle-up",
-    }
-
-    await positionManager(page, targetPosition)
-
-    await page.waitForFunction(
-      ({ x, y, direction, animationKey }) => {
-        const debug = window.__innGame?.debug
-        if (!debug) return false
-        const within = (value, expected) =>
-          Math.abs((value ?? 0) - expected) < 0.01
-        return (
-          within(debug.x, x) &&
-          within(debug.y, y) &&
-          debug.direction === direction &&
-          debug.animationKey === animationKey
-        )
-      },
-      targetPosition,
+    await placeManagerNextToSprite(
+      page,
+      { ...bellPlacements.above, direction: "up", animationKey: "idle-up" },
+      { verifyDebug: true },
     )
 
     await withBellMonitor(page, async () => {
@@ -357,74 +163,23 @@ test.describe("Bell interaction", () => {
 
     await positionManager(page, targetPosition)
 
-    await page.waitForFunction(
-      ({ x, y, direction, animationKey }) => {
-        const debug = window.__innGame?.debug
-        if (!debug) return false
-        const within = (value, expected) =>
-          Math.abs((value ?? 0) - expected) < 0.01
-        return (
-          within(debug.x, x) &&
-          within(debug.y, y) &&
-          debug.direction === direction &&
-          debug.animationKey === animationKey
-        )
-      },
-      targetPosition,
-    )
+    await waitForManagerDebugState(page, targetPosition)
 
-    const proximity = await page.evaluate(() => {
-      const runtime = window.__innGame
-      const bell = runtime?.map?.interactables?.find(
-        (entry) => entry?.type === "bell",
-      )
-      const map = runtime?.map
-      const dimensions = map?.dimensions ?? {}
-      const tilewidth = dimensions.tilewidth ?? 0
-      const tileheight = dimensions.tileheight ?? 0
-      const offsetX = map?.container?.x ?? 0
-      const offsetY = map?.container?.y ?? 0
-      const { registry, components, entities } = runtime?.ecs ?? {}
-      const manager = entities?.manager
-      const transform = registry?.getComponent?.(manager, components?.Transform)
-      const spriteRef = registry?.getComponent?.(manager, components?.SpriteRef)
-      const sprite = spriteRef?.sprite ?? null
-      const width =
-        sprite?.width ??
-        sprite?.texture?.frame?.width ??
-        sprite?.texture?.width ??
-        tilewidth
-      const fullHeight =
-        sprite?.height ??
-        sprite?.texture?.frame?.height ??
-        sprite?.texture?.height ??
-        tileheight
-      const collisionHeight = fullHeight > 0 ? fullHeight / 2 : 0
-      const footprintX = (transform?.x ?? 0) + 0
-      const footprintY = (transform?.y ?? 0) + (fullHeight - collisionHeight)
-      const actorFootX = footprintX + width / 2
-      const actorFootY = footprintY + collisionHeight - 1
-      const bellCenterX =
-        offsetX + (bell?.tile?.x ?? 0) * tilewidth + tilewidth / 2
-      const bellFootY =
-        offsetY + ((bell?.tile?.y ?? 0) + 1) * tileheight - 1
-      const deltaX = bellCenterX - actorFootX
-      const deltaY = bellFootY - actorFootY
-      const halfWidth = tilewidth / 2
-      const verticalExtent = tileheight
-      const horizontalGap = Math.max(0, Math.abs(deltaX) - halfWidth)
-      const verticalGap = Math.max(0, Math.abs(deltaY) - verticalExtent)
-      const distance = Math.hypot(horizontalGap, verticalGap)
-      return {
-        actorFoot: { x: actorFootX, y: actorFootY },
-        bellFoot: { x: bellCenterX, y: bellFootY },
-        horizontalGap,
-        verticalGap,
-        distance,
-      }
+    const proximity = await collectInteractableSnapshot(page, {
+      interactable: { type: "bell", index: 0 },
     })
-    expect(proximity.horizontalGap).toBeLessThanOrEqual(18)
-    expect(proximity.verticalGap).toBeLessThanOrEqual(16)
+    const horizontalGap = Math.max(
+      0,
+      Math.abs(proximity.target.foot.x - proximity.actor.foot.x) -
+        proximity.tileSize.width / 2,
+    )
+    const verticalGap = Math.max(
+      0,
+      Math.abs(proximity.target.foot.y - proximity.actor.foot.y) -
+        proximity.tileSize.height,
+    )
+    expect(horizontalGap).toBeLessThanOrEqual(18)
+    expect(verticalGap).toBeLessThanOrEqual(16)
 
     await withBellMonitor(page, async () => {
       await page.keyboard.press("KeyA")
@@ -448,81 +203,23 @@ test.describe("Bell interaction", () => {
 
     await positionManager(page, targetPosition)
 
-    await page.waitForFunction(
-      ({ x, y, direction, animationKey }) => {
-        const debug = window.__innGame?.debug
-        if (!debug) return false
-        const within = (value, expected) =>
-          Math.abs((value ?? 0) - expected) < 0.01
-        return (
-          within(debug.x, x) &&
-          within(debug.y, y) &&
-          debug.direction === direction &&
-          debug.animationKey === animationKey
-        )
-      },
-      targetPosition,
-    )
+    await waitForManagerDebugState(page, targetPosition)
 
-    const proximity = await page.evaluate(() => {
-      const runtime = window.__innGame
-      const bell = runtime?.map?.interactables?.find(
-        (entry) => entry?.type === "bell",
-      )
-      const map = runtime?.map
-      const dimensions = map?.dimensions ?? {}
-      const tilewidth = dimensions.tilewidth ?? 0
-      const tileheight = dimensions.tileheight ?? 0
-      const offsetX = map?.container?.x ?? 0
-      const offsetY = map?.container?.y ?? 0
-      const { registry, components, entities } = runtime?.ecs ?? {}
-      const manager = entities?.manager
-      const transform = registry?.getComponent?.(manager, components?.Transform)
-      const spriteRef = registry?.getComponent?.(manager, components?.SpriteRef)
-      const sprite = spriteRef?.sprite ?? null
-      const width =
-        sprite?.width ??
-        sprite?.texture?.frame?.width ??
-        sprite?.texture?.width ??
-        tilewidth
-      const fullHeight =
-        sprite?.height ??
-        sprite?.texture?.frame?.height ??
-        sprite?.texture?.height ??
-        tileheight
-      const collisionHeight = fullHeight > 0 ? fullHeight / 2 : 0
-      const footprintX = transform?.x ?? 0
-      const footprintOffsetY = fullHeight - collisionHeight
-      const footprintY = (transform?.y ?? 0) + footprintOffsetY
-      const actorRect = {
-        left: footprintX,
-        right: footprintX + width,
-        top: footprintY - footprintOffsetY,
-        bottom: footprintY + collisionHeight,
-      }
-      const tileRect = {
-        left: offsetX + (bell?.tile?.x ?? 0) * tilewidth,
-        right: offsetX + ((bell?.tile?.x ?? 0) + 1) * tilewidth,
-        top: offsetY + (bell?.tile?.y ?? 0) * tileheight,
-        bottom: offsetY + ((bell?.tile?.y ?? 0) + 1) * tileheight,
-      }
-      const horizontalGap = Math.max(
-        0,
-        tileRect.left - actorRect.right,
-        actorRect.left - tileRect.right,
-      )
-      const verticalGap = Math.max(
-        0,
-        tileRect.top - actorRect.bottom,
-        actorRect.top - tileRect.bottom,
-      )
-      return {
-        horizontalGap,
-        verticalGap,
-      }
+    const proximity = await collectInteractableSnapshot(page, {
+      interactable: { type: "bell", index: 0 },
     })
-    expect(proximity.horizontalGap).toBeLessThanOrEqual(16)
-    expect(proximity.verticalGap).toBeLessThanOrEqual(16)
+    const horizontalGap = Math.max(
+      0,
+      proximity.target.rect.left - proximity.actor.rect.right,
+      proximity.actor.rect.left - proximity.target.rect.right,
+    )
+    const verticalGap = Math.max(
+      0,
+      proximity.target.rect.top - proximity.actor.rect.bottom,
+      proximity.actor.rect.top - proximity.target.rect.bottom,
+    )
+    expect(horizontalGap).toBeLessThanOrEqual(16)
+    expect(verticalGap).toBeLessThanOrEqual(16)
 
     await withBellMonitor(page, async () => {
       await page.keyboard.press("KeyA")
