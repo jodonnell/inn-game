@@ -14,3 +14,13 @@ npm run deploy -> setup pages on deploy branch
 The Electron packaging step runs `vite build` first, then emits macOS, Windows, and Linux artifacts into `release/`, keeping the game Steam-ready after every build.
 
 ~/Library/Application\ Support/Steam/steamapps/common/Aseprite/Aseprite.app/Contents/MacOS/aseprite  -b assets/raw/stuff/*.png   --sheet assets/spritesheets/sheet.png   --data assets/spritesheets/sheet.json     --sheet-type rows --sheet-columns 32 --color-mode indexed --ignore-empty 
+
+
+
+colima start --cpu 4 --memory 8
+docker build -t codex-sandbox .
+docker run -it --rm --privileged -v "$PWD":/workspace -v codex_home:/root -w /workspace codex-sandbox
+
+codex --sandbox danger-full-access --ask-for-approval never
+
+
